@@ -71,7 +71,9 @@ ggplot(logr1, aes(x=diagnosis, y=range)) +
 logr2= glm(diagnosis ~ )
 
 
-
+#Q: are the NA's normal? How do I code the sensitivity etc into the dataframe(should I name a new df with it?)
+#why should I use predict in this case?
+# re-calculate performance?
 
 
 
