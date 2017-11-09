@@ -15,7 +15,7 @@ library(pacman)
 
 devtools::install_github("LudvigOlsen/cvms")
 
-p_load(dplyr, lmerTest, ggplot2, stringr, plyr, caret, modelr, tidyverse, MASS, simr, MuMIn, cvTools, hydroGOF, lsr, pastecs, crqa, dostats, readr, stats, pROC, cvms)
+p_load(dplyr, lmerTest, ggplot2, stringr, plyr, caret, modelr, tidyverse, MASS, simr, MuMIn, cvTools, hydroGOF, lsr, pastecs, crqa, dostats, readr, stats, pROC, cvms, groupdata2)
 
 dataframe = read.csv("final_rqa.csv", header = TRUE)
 
@@ -42,7 +42,7 @@ N.B. Now you have two levels of structure: subject and study. Should this impact
 
 ```{r}
 
-logr1 = glmer(diagnosis ~ scale(range) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
+logr1 = glmer(diagnosis ~ scale(range) + scale(trial) + (1|trial), data = dataframe, family = binomial)
 summary(logr1) 
 
 #Because of different scaling, I had to scale() trial + range. 
@@ -86,6 +86,7 @@ dataframe$Predictions[dataframe$PredictionsPerc>0]="control"
 dataframe$Predictions[dataframe$PredictionsPerc<=0]="schizophrenia"
 confusionMatrix(data = dataframe$Predictions, reference = dataframe$diagnosis, positive = "schizophrenia")
 
+is.factor(dataframe$diagnosis)
 
 #ROC curve
 
@@ -93,7 +94,7 @@ rocCurve <- roc(response = dataframe$diagnosis, predictor = dataframe$Prediction
 auc(rocCurve) 
 ci (rocCurve)
 plot(rocCurve, legacy.axes = TRUE) 
-#Area under the curve = 0.5739
+#Area under the curve = 0.5739 (calculate full area between chance and the data we have)
 #95% CI: 0.5394-0.6085 (DeLong)
 train_error = NULL
 test_error = NULL
@@ -101,9 +102,23 @@ n = 1
 
 #cvms cross validation model selection
 
-?cross_validate()
 
-cross_validate(dataframe, logr1, folds_col = "folds", family = "binomial", link = NULL, REML = FALSE)
+
+set.seed(7)
+
+# Fold data 
+
+
+dataframe = groupdata2::fold(dataframe, k = 5, cat_col = 'diagnosis', id_col = 'participant') %>% arrange(.folds)
+dataframe %>% head(15) %>% kable()
+
+
+
+CV1 = cross_validate(dataframe, "diagnosis ~ scale(range) + (1|study)", folds_col = '.folds', family='binomial', REML = FALSE)
+
+
+
+cross_validate(dataframe, models = "diagnosis~scale(range)", folds_col = ".folds", family = "binomial", REML = FALSE)
 
 
 
@@ -114,20 +129,6 @@ cross_validate(data, models, folds_col = ".folds", family = "gaussian",
 
 
 
-train_error = NULL
-test_error = NULL
-n = 1
-for (i in folds){
-    #Segement your data by fold using the which() function 
-    testIndexes <- which(dataframe$participant %in% i,arr.ind=TRUE)
-    testData <- train_data[testIndexes, ] #making a new variable which contains the train data
-    trainData <- train_data[-testIndexes, ]
-    model1 = glmer(diagnosis ~ scale(range) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial) #new model w/ traindata
-    train_error[n] = roc(model1, trainData) #making an error variable which contains the model
-    testData$prediction <- predict(model1, testData, allow.new.levels = TRUE) #predict it for the test data
-    test_error[n] = roc(testData$diagnosis, testData$prediction)
-    n = n+1
-    }
 
 
 ```
@@ -138,6 +139,35 @@ for (i in folds){
 
 logr2 = glmer(diagnosis ~ scale(mean) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
 summary(logr2)
+
+
+logr3 = glmer(diagnosis ~ scale(median) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
+summary(logr3)
+
+
+logr4 = glmer(diagnosis ~ scale(stdDev) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
+summary(logr4)
+
+
+logr5 = glmer(diagnosis ~ scale(coefficientOfVariation) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
+summary(logr5)
+
+
+logr6 = glmer(diagnosis ~ scale(delay) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
+summary(logr6)
+
+logr7 = glmer(diagnosis ~ scale(radius) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
+summary(logr7)
+
+logr8 = glmer(diagnosis ~ scale(InterquartileRange) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
+summary(logr8) 
+
+logr9 = glmer(diagnosis ~ scale(embed) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
+summary(logr9)
+
+logr9 = glmer(diagnosis ~ scale(embed) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
+summary(logr9)
+
 
 
 dataframe$pred2 = predict(logr2)
