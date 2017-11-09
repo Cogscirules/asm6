@@ -1,0 +1,128 @@
+---
+title: "Assignment 3 - Part 2 - Diagnosing Schizophrenia from Voice"
+author: "Riccardo Fusaroli"
+date: "October 17, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 6")
+
+library(pacman)
+
+
+p_load(dplyr, lmerTest, ggplot2, stringr, plyr, caret, modelr, ModelMetrics, tidyverse, MASS, simr, MuMIn, cvTools, hydroGOF, lsr, pastecs, crqa, dostats, readr)
+
+dataframe = read.csv("final_rqa.csv", header = TRUE)
+
+
+
+```
+
+## Assignment 3 - Diagnosing schizophrenia from voice
+
+In the previous part of the assignment you generated a bunch of "features", that is, of quantitative descriptors of voice in schizophrenia, focusing on pitch.
+In the course of this assignment we will use them to try to automatically diagnose schizophrenia from voice only, that is, relying on the set of features you produced last time, we will try to produce an automated classifier.
+
+### Question 1: Can you diagnose schizophrenia from pitch range only? If so, how well?
+
+Build a logistic regression to see whether you can diagnose schizophrenia from pitch range only.
+
+Calculate the different performance measures (accuracy, sensitivity, specificity, PPV, NPV, ROC curve) on a logistic regression using the full dataset. Don't forget the random effects!
+
+Then cross-validate the logistic regression and re-calculate performance on the testing folds. N.B. The cross-validation functions you already have should be tweaked: you need to calculate these new performance measures.
+
+N.B. the predict() function generates log odds (the full scale between minus and plus infinity). Log odds > 0 indicates a choice of 1, below a choice of 0.
+N.B. you need to decide whether calculate performance on each single test fold or save all the prediction for test folds in one datase, so to calculate overall performance.
+N.B. Now you have two levels of structure: subject and study. Should this impact your cross-validation?
+
+```{r}
+
+logr1 = glm(diagnosis ~ range + (1 + trial|participant), data = dataframe, family = binomial)
+summary(logr1)
+
+# Intercept = log odds for diagnosis when range = 0
+# range = for each increase in range by 1, how much does the log odds change (the slope) (because it is odds, it account for the non-linearityof the slope)
+
+exp(0.04)
+#1.040811
+
+
+#increase with 1
+exp(0.04 - 0.34)
+#0.740
+
+#increase with 2
+exp(0.04 - 0.68)
+#0.527
+
+#^ odds of control shrink when increase range increases by 1.
+
+#plotting
+ggplot(logr1,aes(diagnosis,range,colour=diagnosis))+geom_point()+theme_classic()
+
+ggplot(logr1, aes(x=diagnosis, y=range)) + 
+  geom_point(shape=1,position=position_jitter(width=.05,height=.05)) + 
+  stat_smooth(method="glm",method.args=list(family="binomial"), se=FALSE)
+
+#Can you predict schiz from range of pitch only?
+
+logr2= glm(diagnosis ~ )
+
+
+#Q: are the NA's normal? How do I code the sensitivity etc into the dataframe(should I name a new df with it?)
+#why should I use predict in this case?
+# re-calculate performance?
+
+
+
+
+```
+
+### Question 2 - Which single acoustic predictor is the best predictor of diagnosis?
+
+```{r}
+
+
+
+```
+
+
+### Question 3 - Which combination of acoustic predictors is best for diagnosing schizophrenia?
+
+Now it's time to go wild! Use all (voice-related) variables and interactions you can think of. Compare models and select the best performing model you can find.
+
+Remember:
+- Out-of-sample error crucial to build the best model!
+- After choosing the model, send Celine and Riccardo the code of your model
+
+```{r}
+
+
+
+```
+
+### Question 4: Properly report the results
+
+METHODS SECTION: how did you analyse the data? That is, how did you extract the data, designed the models and compared their performance?
+
+RESULTS SECTION: can you diagnose schizophrenia based on voice? which features are used? Comment on the difference between the different performance measures.
+
+```{r}
+
+
+
+```
+
+
+
+### Bonus question 5
+
+You have some additional bonus data involving speech rate, pauses, etc. Include them in your analysis. Do they improve classification?
+
+### Bonus question 6
+
+Logistic regression is only one of many classification algorithms. Try using others and compare performance. Some examples: Discriminant Function, Random Forest, Support Vector Machine, etc. The package caret provides them.
