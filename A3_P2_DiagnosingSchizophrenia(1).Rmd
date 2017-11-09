@@ -13,12 +13,13 @@ setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 6")
 
 library(pacman)
 
+devtools::install_github("LudvigOlsen/cvms")
 
-p_load(dplyr, lmerTest, ggplot2, stringr, plyr, caret, modelr, ModelMetrics, tidyverse, MASS, simr, MuMIn, cvTools, hydroGOF, lsr, pastecs, crqa, dostats, readr)
+p_load(dplyr, lmerTest, ggplot2, stringr, plyr, caret, modelr, tidyverse, MASS, simr, MuMIn, cvTools, hydroGOF, lsr, pastecs, crqa, dostats, readr, stats, pROC, cvms)
 
 dataframe = read.csv("final_rqa.csv", header = TRUE)
 
-
+View(dataframe)
 
 ```
 
@@ -41,8 +42,10 @@ N.B. Now you have two levels of structure: subject and study. Should this impact
 
 ```{r}
 
-logr1 = glm(diagnosis ~ range + (1 + trial|participant), data = dataframe, family = binomial)
-summary(logr1)
+logr1 = glmer(diagnosis ~ scale(range) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
+summary(logr1) 
+
+#Because of different scaling, I had to scale() trial + range. 
 
 # Intercept = log odds for diagnosis when range = 0
 # range = for each increase in range by 1, how much does the log odds change (the slope) (because it is odds, it account for the non-linearityof the slope)
@@ -61,6 +64,7 @@ exp(0.04 - 0.68)
 
 #^ odds of control shrink when increase range increases by 1.
 
+
 #plotting
 ggplot(logr1,aes(diagnosis,range,colour=diagnosis))+geom_point()+theme_classic()
 
@@ -68,16 +72,62 @@ ggplot(logr1, aes(x=diagnosis, y=range)) +
   geom_point(shape=1,position=position_jitter(width=.05,height=.05)) + 
   stat_smooth(method="glm",method.args=list(family="binomial"), se=FALSE)
 
+
 #Can you predict schiz from range of pitch only?
+#Add predictins to the dataframe
 
-logr2= glm(diagnosis ~ )
-
-
-#Q: are the NA's normal? How do I code the sensitivity etc into the dataframe(should I name a new df with it?)
-#why should I use predict in this case?
-# re-calculate performance?
+dataframe$pred = predict(logr1)
 
 
+# Confusion Matrix
+
+dataframe$PredictionsPerc=predict(logr1)
+dataframe$Predictions[dataframe$PredictionsPerc>0]="control"
+dataframe$Predictions[dataframe$PredictionsPerc<=0]="schizophrenia"
+confusionMatrix(data = dataframe$Predictions, reference = dataframe$diagnosis, positive = "schizophrenia")
+
+
+#ROC curve
+
+rocCurve <- roc(response = dataframe$diagnosis, predictor = dataframe$PredictionsPerc)
+auc(rocCurve) 
+ci (rocCurve)
+plot(rocCurve, legacy.axes = TRUE) 
+#Area under the curve = 0.5739
+#95% CI: 0.5394-0.6085 (DeLong)
+train_error = NULL
+test_error = NULL
+n = 1
+
+#cvms cross validation model selection
+
+?cross_validate()
+
+cross_validate(dataframe, logr1, folds_col = "folds", family = "binomial", link = NULL, REML = FALSE)
+
+
+
+cross_validate(data, models, folds_col = ".folds", family = "gaussian",
+  link = NULL, REML = FALSE, cutoff = 0.5, positive = 1, rmnc = FALSE,
+  model_verbose = FALSE)
+
+
+
+
+train_error = NULL
+test_error = NULL
+n = 1
+for (i in folds){
+    #Segement your data by fold using the which() function 
+    testIndexes <- which(dataframe$participant %in% i,arr.ind=TRUE)
+    testData <- train_data[testIndexes, ] #making a new variable which contains the train data
+    trainData <- train_data[-testIndexes, ]
+    model1 = glmer(diagnosis ~ scale(range) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial) #new model w/ traindata
+    train_error[n] = roc(model1, trainData) #making an error variable which contains the model
+    testData$prediction <- predict(model1, testData, allow.new.levels = TRUE) #predict it for the test data
+    test_error[n] = roc(testData$diagnosis, testData$prediction)
+    n = n+1
+    }
 
 
 ```
@@ -86,6 +136,11 @@ logr2= glm(diagnosis ~ )
 
 ```{r}
 
+logr2 = glmer(diagnosis ~ scale(mean) + scale(trial) + (1 + trial|participant), data = dataframe, family = binomial)
+summary(logr2)
+
+
+dataframe$pred2 = predict(logr2)
 
 
 ```
