@@ -15,7 +15,9 @@ library(pacman)
 
 devtools::install_github("LudvigOlsen/cvms")
 
-p_load(dplyr, lmerTest, ggplot2, stringr, plyr, caret, modelr, tidyverse, MASS, simr, MuMIn, cvTools, hydroGOF, lsr, pastecs, crqa, dostats, readr, stats, pROC, cvms, groupdata2)
+p_load(dplyr, lmerTest, ggplot2, stringr, plyr, caret, modelr, tidyverse, MASS, simr, MuMIn, cvTools, hydroGOF, lsr, pastecs, crqa, dostats, readr, stats, pROC, cvms, groupdata2, knitr)
+
+?kable()
 
 dataframe = read.csv("final_rqa.csv", header = TRUE)
 
